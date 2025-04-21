@@ -798,7 +798,6 @@ class _SimulatorTabState extends State<SimulatorTab> {
 
       setState(() {
         currentPc = 0;
-        bufferPC = '';
         showBufferForPC = false;
       });
     } catch (e) {
@@ -1347,7 +1346,7 @@ class _SimulatorTabState extends State<SimulatorTab> {
                               address =
                                   int.tryParse(input.substring(2), radix: 16);
                             } else {
-                              address = int.tryParse(input);
+                              address = int.tryParse(input, radix: 16);
                             }
 
                             if (address != null &&

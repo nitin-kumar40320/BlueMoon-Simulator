@@ -626,7 +626,7 @@ struct PMI_data
         }
         while (MDR.size() < 8)
             MDR = "0" + MDR;
-        appendToConsole("loaded data: " + MDR + " from " + MAR);
+        //appendToConsole("loaded data: " + MDR + " from " + MAR);
     }
 
     // Store MDR value into mem
@@ -1405,7 +1405,7 @@ public:
         {
             f.writeBack(flag);
             appendToConsole(
-                "  W: rd=x" + to_string(f.registers.rd) +
+                "  W: PC="+ f.buf.memwb.pc + " rd=x" +to_string(f.registers.rd) +
                 " val=" + ry);
 
             if (f.buf.memwb.pc == printPipelineForInstruction)
@@ -1423,14 +1423,14 @@ public:
         }
         else
         {
-            appendToConsole("  W: -");
+            appendToConsole("  W: PC=" + f.buf.memwb.pc );
         }
 
         if (f.buf.exmem.mem_load_needed)
         {
             f.accessMemory(rz, f.buf.exmem.funct3);
             appendToConsole(
-                "  M: LOAD type=" + f.buf.exmem.funct3 +
+                "  M: PC="+ f.buf.memwb.pc  +" LOAD type=" +f.buf.exmem.funct3 +
                 " data=" + ry +
                 " addr=" + rz);
         }
@@ -1438,14 +1438,14 @@ public:
         {
             f.accessMemory(rz, f.buf.exmem.rs2val, f.buf.exmem.funct3);
             appendToConsole(
-                "  M: STORE type=" + f.buf.exmem.funct3 +
+                "  M: PC=" + f.buf.memwb.pc +" STORE type=" + f.buf.exmem.funct3 +
                 " data=" + f.buf.exmem.rs2val +
                 " addr=" + rz);
         }
         else
         {
             f.accessMemory();
-            appendToConsole("  M: -");
+            appendToConsole("  M: PC="+ f.buf.memwb.pc );
         }
 
         if (f.buf.exmem.pc == printPipelineForInstruction)
@@ -1459,7 +1459,7 @@ public:
 
         f.execute();
         appendToConsole(
-            "  E: op=" + f.alu.operation +
+            "  E: PC="+ f.buf.exmem.pc +" op="+ f.alu.operation +
             " result=" + rz);
 
         if (f.buf.idex.pc == printPipelineForInstruction)
@@ -1474,7 +1474,7 @@ public:
 
         f.decode();
         appendToConsole(
-            "  D: opcode=" + f.buf.idex.opcode +
+            "  D: PC=" + f.buf.idex.pc +" opcode=" + f.buf.idex.opcode +
             " rd=" + f.buf.idex.rd +
             " rs1=" + f.buf.idex.rs1 +
             " rs2=" + f.buf.idex.rs2 +
