@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta http-equiv="IE=Edge" content="IE=Edge">
+  <meta name="description" content="A RISC-V simulator built with Flutter.">
+  <script>var serviceWorkerVersion = null;</script>
+  <script>window.define = undefined; window.createModule = undefined;</script>
+  <script src="simulator.js"></script>
+  <script src="pipelinesim.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      const simPromise  = window.createModule();
+      const pipePromise = window.createPipelineModule();
+      Promise.all([simPromise, pipePromise])
+        .then(function([simModule, pipelineModule]) {
+          window.Module          = simModule;
+          window.PipelineModule  = pipelineModule;
+          console.log("Both WASM modules loaded");
+        })
+        .catch(function(err) {
+          console.error("Error loading WASM modules:", err);
+        });
+    });
+  </script>
+  <script src="flutter.js" defer></script>
+</head>
+<body>
+  <script>
+    window.addEventListener('load', function() {
+      var waitForBoth = function(callback) {
+        if (window.Module && window.PipelineModule) {
+          callback();
+        } else {
+          setTimeout(function() { waitForBoth(callback); }, 100);
+        }
+      };
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: { serviceWorkerVersion: serviceWorkerVersion },
+        onEntrypointLoaded: function(engineInitializer) {
+          waitForBoth(function() {
+            engineInitializer.initializeEngine().then(function(appRunner) {
+              appRunner.runApp();
+            });
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
