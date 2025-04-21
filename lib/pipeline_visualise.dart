@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'package:riscv_simulator/wasm_interop.dart';
 
@@ -12,7 +12,6 @@ final List<Color> availableColors = [
   Colors.purple.shade300,
   Colors.yellow.shade300,
   Colors.teal.shade300,
-  Colors.pink.shade300,
   Colors.brown.shade300,
   Colors.cyan.shade300,
   Colors.lime.shade300,
@@ -21,12 +20,10 @@ int colorIndex = 0;
 
 class PipelineBlockDiagram extends StatefulWidget {
   final String codeContent;
-  final bool dataForwardingEnabled;
 
   const PipelineBlockDiagram({
     super.key,
     required this.codeContent,
-    this.dataForwardingEnabled = true,
   });
 
   @override
@@ -35,6 +32,7 @@ class PipelineBlockDiagram extends StatefulWidget {
 
 class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
   late Simulator _simulator;
+  bool dataForwardingEnabled = true; 
   bool _isSimulatorInitialized = false;
   Timer? _runTimer; // Timer for the Run button
   bool _isRunning = false;
@@ -92,10 +90,8 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
     if (widget.codeContent != old.codeContent) {
       _loadCode();
     }
-    if (widget.dataForwardingEnabled != old.dataForwardingEnabled) {
-      _simulator.toggleForwarding(widget.dataForwardingEnabled);
-      _updatePipelineState();
-    }
+    _simulator.toggleForwarding(dataForwardingEnabled);
+    _updatePipelineState();
   }
 
   Future<void> _initializeSimulator() async {
@@ -105,7 +101,7 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
       setState(() => _isSimulatorInitialized = true);
 
       if (widget.codeContent.isNotEmpty) _loadCode();
-      _simulator.toggleForwarding(widget.dataForwardingEnabled);
+      _simulator.toggleForwarding(dataForwardingEnabled);
       _updatePipelineState();
     } catch (e) {
       print('Error initializing simulator: $e');
@@ -152,6 +148,8 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
     if (!_isSimulatorInitialized) return;
     try {
       _simulator.reset();
+      instructionColors.clear();
+      colorIndex = 0;
       _updatePipelineState();
       if (widget.codeContent.isNotEmpty) _loadCode();
     } catch (e) {
@@ -169,7 +167,6 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
   }
 
   void _parsePipelineState(String s) {
-    instructionColors.clear();
     forwardingPaths.clear();
     hazards.clear();
 
@@ -179,11 +176,12 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
       if (kv.length < 2) continue;
 
       final instruction = kv[1].split(',').first; // Extract the instruction
-      if (instruction.isNotEmpty &&
-          !instructionColors.containsKey(instruction)) {
-        instructionColors[instruction] = availableColors[colorIndex];
+      if (instruction.isNotEmpty && !instructionColors.containsKey(instruction)) {
+        instructionColors[instruction] = availableColors[colorIndex%availableColors.length];
+        print('$instruction, ${instructionColors[instruction]}');
+        colorIndex++;
       }
-      colorIndex = (colorIndex + 1) % availableColors.length;
+
 
       switch (kv[0]) {
         case 'IF':
@@ -225,21 +223,56 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
 
   void _parseHazards(String data) {
     var haz = data.split('-');
+    int dh=0,ch=0;
     for (var hazard in haz) {
       if (hazard.isEmpty) continue;
       final parts = hazard.split(',');
       if (parts[0] == 'Data') {
+        dh++;
         List<String> res = [];
         res.add('FROM: ${parts[1]} , INSTR: ${parts[2]}');
         res.add('TO: ${parts[3]} , INSTR: ${parts[4]}');
         hazards.add(res);
       } else {
+        ch++;
         List<String> res = [];
         res.add('PREDICTED: ${parts[1]}');
         res.add('ACTUAL: ${parts[2]}');
         hazards.add(res);
       }
     }
+    if(dh>0 && ch>0)
+    {
+      _showHazard('DATA AND CONTROL HAZARDS DETECTED !!!', 'Flushing and ${dataForwardingEnabled?'Data Forwarding':'Stalling'} done');
+    } else if (dh > 0) {
+      _showHazard('DATA HAZARD DETECTED !!!', '${dataForwardingEnabled?'Data Forwarding':'Stalling'} done');
+    } else if (ch > 0) {
+      _showHazard('CONTROL HAZARD DETECTED !!!', 'Flushing the Pipeline');
+    }
+  }
+
+  void _showHazard(String title, String message)
+  {
+    Flushbar(
+      messageText: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.grey[700]),
+      ),
+      duration: const Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      flushbarStyle: FlushbarStyle.FLOATING,
+      backgroundColor: Colors.black,
+      icon: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Icon(Icons.error, size: 40, color: Colors.red),
+      ),
+      titleText: Text(title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+      margin: const EdgeInsets.all(8),
+      borderRadius: BorderRadius.circular(10),
+      maxWidth: 300,
+    ).show(context);
+
   }
 
   void _parseIfStage(String d) {
@@ -377,6 +410,29 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
                 label: Text('Reset', style: TextStyle(color: Colors.blue[900])),
                 style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
               ),
+              const SizedBox(width: 16),
+              //Add button to toggle data forwarding
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    dataForwardingEnabled = !dataForwardingEnabled;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _simulator.toggleForwarding(dataForwardingEnabled);
+                    });
+                  });
+                },
+                icon: Icon(
+                  dataForwardingEnabled ? Icons.dnd_forwardslash : Icons.forward,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  !dataForwardingEnabled ? 'Data Forwarding' : 'Stalling',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        dataForwardingEnabled ? Colors.blue[900] : Colors.red),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -466,15 +522,22 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
                           ),
                         ),
                         Expanded(
-                          child: hazards.isEmpty
-                              ? Container()
-                              : Container(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 4, horizontal: 8),
+                          child: forwardingPaths.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    'No Forwarding Paths',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                )
+                              : Padding(
+                                padding: const EdgeInsets.all(8.0),
                                 child: ListView.builder(
                                     itemCount: forwardingPaths.length,
                                     padding: EdgeInsets.symmetric(
-                                        vertical: 4, horizontal: 8),
+                                        vertical: 1, horizontal: 8),
                                 itemBuilder: (context, index) {
                                   final path = forwardingPaths[index];
                                   return Padding(
@@ -549,16 +612,15 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
                                     ),
                                   ),
                                 )
-                              : ListView.builder(
-                                  itemCount: hazards.length,
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 4, horizontal: 8),
-                                  itemBuilder: (context, index) {
-                                    final hazard = hazards[index];
-                                    return Container(
-                                      padding: EdgeInsets.all(8),
-                                      color: Colors.white,
-                                      child: Row(
+                              : Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: ListView.builder(
+                                    itemCount: hazards.length,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 1, horizontal: 8),
+                                    itemBuilder: (context, index) {
+                                      final hazard = hazards[index];
+                                      return Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
@@ -576,10 +638,10 @@ class _PipelineBlockDiagramState extends State<PipelineBlockDiagram> {
                                                   ))
                                               .toList(),
                                         ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                      );
+                                    },
+                                  ),
+                              ),
                         ),
                       ],
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:flutter/services.dart';
 import 'package:riscv_simulator/console_out.dart';
 import 'package:riscv_simulator/wasm_interop.dart';
 
@@ -27,7 +28,8 @@ class _SimulatorTabState extends State<SimulatorTab> {
   bool showReg = false;
   bool showBuffers = false;
   bool showBP = false;
-
+  String bufferPC = ''; // Stores the entered PC value
+  bool showBufferForPC = false;
 
   final GlobalKey<ConsoleOutputWidgetState> _consoleKey =
       GlobalKey<ConsoleOutputWidgetState>();
@@ -76,8 +78,9 @@ class _SimulatorTabState extends State<SimulatorTab> {
   Future<void> _initializeSimulator() async {
     try {
       // Await the async factory method instead of calling the constructor directly.
-      (!pipelineEnable)? _simulator = await RiscVSimulator.create():
-          _simulator= await RiscVPipelinedSimulator.create();
+      (!pipelineEnable)
+          ? _simulator = await RiscVSimulator.create()
+          : _simulator = await RiscVPipelinedSimulator.create();
       // Now that the module is loaded, initialize the simulator.
       _simulator.init();
       setState(() {
@@ -128,7 +131,7 @@ class _SimulatorTabState extends State<SimulatorTab> {
         BTB[pc] = btbEntry[0];
         BHT[pc] = btbEntry[1] == 'true';
       }
-      
+
       setState(() {});
     } catch (e) {
       _consoleKey.currentState?.appendText('Error updating BP: $e');
@@ -183,7 +186,8 @@ class _SimulatorTabState extends State<SimulatorTab> {
           segmentName = 'text';
       }
 
-      final memData = _simulator.showMem(segmentName, memoryStartAddress, memoryPageSize * 4);
+      final memData = _simulator.showMem(
+          segmentName, memoryStartAddress, memoryPageSize * 4);
       final memPairs = memData.split(';');
       setState(() {
         memoryMap.clear();
@@ -236,37 +240,31 @@ class _SimulatorTabState extends State<SimulatorTab> {
     }
   }
 
-  void printRegs()
-  {
-      _consoleKey.currentState?.appendText("=> REGISTER FILE");
-      final regData = _simulator.showReg();
-      final regPairs = regData.split(';');
-      for (final pair in regPairs)
-      {
-        _consoleKey.currentState?.appendText(pair);
-      }
+  void printRegs() {
+    _consoleKey.currentState?.appendText("=> REGISTER FILE");
+    final regData = _simulator.showReg();
+    final regPairs = regData.split(';');
+    for (final pair in regPairs) {
+      _consoleKey.currentState?.appendText(pair);
+    }
   }
 
-  void printBuffers()
-  {
+  void printBuffers() {
     _consoleKey.currentState?.appendText("=> PIPELINE BUFFERS");
     final bufferData = _simulator.getPipelineState();
     final bufferPairs = bufferData.split(';');
-    for (final pair in bufferPairs)
-      {
-        _consoleKey.currentState?.appendText(pair);
-      }
+    for (final pair in bufferPairs) {
+      _consoleKey.currentState?.appendText(pair);
+    }
   }
 
-  void printBP()
-  {
+  void printBP() {
     _consoleKey.currentState?.appendText("=> BRANCH PREDICTOR");
     final btbData = _simulator.getBP();
     final btbPairs = btbData.split(';');
-    for (final pair in btbPairs)
-      {
-        _consoleKey.currentState?.appendText(pair);
-      }
+    for (final pair in btbPairs) {
+      _consoleKey.currentState?.appendText(pair);
+    }
   }
 
   final ScrollController _scrollController = ScrollController();
@@ -510,132 +508,209 @@ class _SimulatorTabState extends State<SimulatorTab> {
         const SizedBox(width: 8),
         //Toggle button sidebar
         Expanded(
-          flex:1,
-          child: Container(
-            color: Colors.white,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  color: Colors.blue[900],
-                  height: 50,
-                  child: const Center(
-                    child: Text(
-                      'Knob Toolbar',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+            flex: 1,
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    color: Colors.blue[900],
+                    height: 50,
+                    child: const Center(
+                      child: Text(
+                        'Knob Toolbar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal:8.0),
-                  child: SwitchListTile(
-                    title: const Text('Pipelining'),
-                    value: pipelineEnable,
-                    onChanged: (bool value) {
-                      setState(() {
-                        pipelineEnable = value;
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _initializeSimulator();
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SwitchListTile(
+                      title: const Text('Pipelining'),
+                      value: pipelineEnable,
+                      onChanged: (bool value) {
+                        setState(() {
+                          pipelineEnable = value;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _initializeSimulator();
+                          });
                         });
-                      });
-                    },
-                    activeTrackColor: Colors.blue[900],
+                      },
+                      activeTrackColor: Colors.blue[900],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(
-                  color: Colors.grey,
-                  height: 1,
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal:8.0),
-                  child: SwitchListTile(
-                    title: const Text('Data Forwarding'),
-                    value: dataForwardingEnable,
-                    onChanged: (bool value) {
-                      setState(() {
-                        dataForwardingEnable = value;
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _simulator.toggleForwarding(dataForwardingEnable);
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SwitchListTile(
+                      title: const Text('Data Forwarding'),
+                      value: dataForwardingEnable,
+                      onChanged: (bool value) {
+                        setState(() {
+                          dataForwardingEnable = value;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _simulator.toggleForwarding(dataForwardingEnable);
+                          });
                         });
-                      });
-                    },
-                    activeTrackColor: Colors.blue[900],
+                      },
+                      activeTrackColor: Colors.blue[900],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(
-                  color: Colors.grey,
-                  height: 1,
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal:8.0),
-                  child: SwitchListTile(
-                    title: const Text('Print Pipeline Buffers'),
-                    value: showBuffers,
-                    onChanged: (bool value) {
-                      setState(() {
-                        showBuffers = value;
-                      });
-                    },
-                    activeTrackColor: Colors.blue[900],
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(
-                  color: Colors.grey,
-                  height: 1,
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal:8.0),
-                  child: SwitchListTile(
-                    title: const Text('Print Register File'),
-                    value: showReg,
-                    onChanged: (bool value) {
-                      setState(() {
-                        showReg = value;
-                      });
-                    },
-                    activeTrackColor: Colors.blue[900],
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SwitchListTile(
+                      title: const Text('Print Pipeline Buffers'),
+                      value: showBuffers,
+                      onChanged: (bool value) {
+                        setState(() {
+                          showBuffers = value;
+                        });
+                      },
+                      activeTrackColor: Colors.blue[900],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(
-                  color: Colors.grey,
-                  height: 1,
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal:8.0),
-                  child: SwitchListTile(
-                    title: const Text('Print Branch Predictor'),
-                    value: showBP,
-                    onChanged: (bool value) {
-                      setState(() {
-                        showBP = value;
-                      });
-                    },
-                    activeTrackColor: Colors.blue[900],
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(
-                  color: Colors.grey,
-                  height: 1,
-                ),
-                const SizedBox(height: 4),
-              ],
-            ),
-          )
-        )
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SwitchListTile(
+                      title: const Text('Print Register File'),
+                      value: showReg,
+                      onChanged: (bool value) {
+                        setState(() {
+                          showReg = value;
+                        });
+                      },
+                      activeTrackColor: Colors.blue[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SwitchListTile(
+                      title: const Text('Print Branch Predictor'),
+                      value: showBP,
+                      onChanged: (bool value) {
+                        setState(() {
+                          showBP = value;
+                        });
+                      },
+                      activeTrackColor: Colors.blue[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SizedBox(
+                      // <-- constrain vertically
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            title: const Text('Print Buffers for Instruction'),
+                            value: showBufferForPC,
+                            onChanged: (bool value) {
+                              setState(() {
+                                showBufferForPC = value;
+                                if(!value)bufferPC = '';
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  _simulator
+                                      .setPrintPipelineForInstruction(bufferPC);
+                                });
+                              });
+                            },
+                            activeTrackColor: Colors.blue[900],
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextField(
+                                  maxLength:
+                                      8, // Limit the input to 8 characters
+                                  maxLengthEnforcement:
+                                      MaxLengthEnforcement.enforced,
+                                  decoration: InputDecoration(
+                                    labelText: 'Enter PC Value',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.blue[900]!,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    counterText:
+                                        '', // Hide the default counter text
+                                  ),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      bufferPC = value;
+                                    });
+                                  },
+                                ),
+                                if (showBufferForPC &&
+                                    bufferPC.length !=
+                                        8) // Show error if length is not 8
+                                  Column(
+                                    children: [
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'PC value must be exactly 8 characters',
+                                        style: TextStyle(
+                                            color: Colors.red, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Divider(
+                    color: Colors.grey,
+                    height: 1,
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ),
+            ))
       ],
     );
   }
@@ -691,9 +766,9 @@ class _SimulatorTabState extends State<SimulatorTab> {
       _updateRegisters();
       _updateMemory();
       _updateBP();
-      if(!pipelineEnable)_updatePC();
+      if (!pipelineEnable) _updatePC();
       _updateConsole();
-      if(showReg)printRegs();
+      if (showReg) printRegs();
       if (showBuffers) printBuffers();
       if (showBP) printBP();
 
@@ -723,6 +798,8 @@ class _SimulatorTabState extends State<SimulatorTab> {
 
       setState(() {
         currentPc = 0;
+        bufferPC = '';
+        showBufferForPC = false;
       });
     } catch (e) {
       _consoleKey.currentState?.appendText('Error resetting simulator: $e');
@@ -946,8 +1023,8 @@ class _SimulatorTabState extends State<SimulatorTab> {
   }
 
   Widget _buildStatView() {
-    String stats='';
-    if(_isSimulatorInitialized)stats = _simulator.getStats();
+    String stats = '';
+    if (_isSimulatorInitialized) stats = _simulator.getStats();
     if (stats.isEmpty) {
       return Center(
         child: Text(

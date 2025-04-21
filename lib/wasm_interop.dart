@@ -21,6 +21,7 @@ abstract class Simulator {
   void toggleForwarding(bool enable);
   String getPipelineState();
   String getBuffers();
+  void setPrintPipelineForInstruction(String pc);
 }
 
 /// Basic, non‑pipelined RISC‑V simulator.
@@ -80,6 +81,8 @@ class RiscVSimulator implements Simulator {
   String getPipelineState() => '';
   @override
   String getBuffers() => '';
+  @override
+  void setPrintPipelineForInstruction(String PC) => {};
 
 }
 
@@ -133,4 +136,7 @@ class RiscVPipelinedSimulator implements Simulator {
   String getBP() => _simulator.callMethod('getBP', []);
   @override
   String getBuffers() => _simulator.callMethod('getBuffers', []);
+  @override
+  void setPrintPipelineForInstruction(String PC) =>
+      _simulator.callMethod('setPrintPipelineForInstruction', [PC]);
 }

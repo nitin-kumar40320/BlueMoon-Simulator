@@ -16,7 +16,8 @@ using namespace std;
 
 // global controls
 bool forwarding_enable = false, piplining_enable = true;
-vector<pair<string, string>> forwardingPaths; 
+string printPipelineForInstruction = "";
+vector<pair<string, string>> forwardingPaths;
 vector<vector<string>> hazards;
 
 // global variables which are used to simulate global registers
@@ -241,11 +242,11 @@ struct IDEX_buffer
         instr_type = "";
         rs1val = "";
         rs2val = "";
-        mem_store_needed=false;
-        mem_load_needed=false;
-        wb_needed=false;
-        branch_needed=false;
-        jal=false;
+        mem_store_needed = false;
+        mem_load_needed = false;
+        wb_needed = false;
+        branch_needed = false;
+        jal = false;
         jalr = false;
     }
     void flush()
@@ -264,11 +265,11 @@ struct IDEX_buffer
         instr_type = "";
         rs1val = "";
         rs2val = "";
-        mem_store_needed=false;
-        mem_load_needed=false;
-        wb_needed=false;
-        branch_needed=false;
-        jal=false;
+        mem_store_needed = false;
+        mem_load_needed = false;
+        wb_needed = false;
+        branch_needed = false;
+        jal = false;
         jalr = false;
     }
 };
@@ -292,9 +293,9 @@ struct EXMEM_buffer
         rs1val = "";
         rs2val = "";
         exe_out = "";
-        mem_store_needed=false;
-        mem_load_needed=false;
-        wb_needed=false;
+        mem_store_needed = false;
+        mem_load_needed = false;
+        wb_needed = false;
     }
     void flush()
     {
@@ -313,9 +314,9 @@ struct EXMEM_buffer
         rs1val = "";
         rs2val = "";
         exe_out = "";
-        mem_store_needed=false;
-        mem_load_needed=false;
-        wb_needed=false;
+        mem_store_needed = false;
+        mem_load_needed = false;
+        wb_needed = false;
     }
 };
 struct MEMWB_buffer
@@ -942,12 +943,14 @@ private:
         if (buf.exmem.rd != "00000" && (buf.idex.rs1 == buf.exmem.rd || buf.idex.rs2 == buf.exmem.rd))
         {
             data_hazards++;
+            appendToConsole(" ");
             appendToConsole("!!EXECUTE STAGE DATA HAZARD DETECTED!!");
-            hazards.push_back({"Data","ID/EX",buf.idex.instr,"EX/MEM",buf.exmem.instr});
+            hazards.push_back({"Data", "ID/EX", buf.idex.instr, "EX/MEM", buf.exmem.instr});
             if (!forwarding_enable)
             {
                 data_stalls++;
                 appendToConsole("STALLING THE PIPELINE FOR 1 CYCLE");
+                appendToConsole(" ");
                 iag.pc = buf.ifid.pc;
                 buf.idex.flush();
                 stall = true;
@@ -958,6 +961,7 @@ private:
                 {
                     data_stalls++;
                     appendToConsole("STALLING THE PIPELINE FOR 1 CYCLE");
+                    appendToConsole(" ");
                     // stall is needed as the value will be avaliable in next cycle only and cant forward in future
                     iag.pc = buf.ifid.pc;
                     buf.idex.flush();
@@ -968,6 +972,7 @@ private:
                     appendToConsole("DATA FORWARDING");
                     appendToConsole("From Instruction " + buf.exmem.instr + ": EXECUTE Stage");
                     appendToConsole("To Instruction " + buf.idex.instr + ": DECODE Stage");
+                    appendToConsole(" ");
                     if (buf.idex.rs1 == buf.exmem.rd) // rs1 is dependent on the value in exmem stage
                     {
                         buf.idex.rs1val = buf.exmem.exe_out;
@@ -987,15 +992,22 @@ private:
         if (buf.memwb.rd != "00000" && (buf.idex.rs1 == buf.memwb.rd || buf.idex.rs2 == buf.memwb.rd))
         {
             data_hazards++;
+            appendToConsole(" ");
             appendToConsole("!!MEMORY STAGE DATA HAZARD DETECTED!!");
-            hazards.push_back({"Data","ID/EX",buf.idex.instr,"MEM/WB",buf.memwb.instr});
+            hazards.push_back({"Data", "ID/EX", buf.idex.instr, "MEM/WB", buf.memwb.instr});
             if (!forwarding_enable)
             {
                 data_stalls++;
                 if (!stall)
+                {
                     appendToConsole("STALLING THE PIPELINE FOR 1 CYCLE");
+                    appendToConsole(" ");
+                }
                 else
+                {
                     appendToConsole("!!STALLED ALREADY!!");
+                    appendToConsole(" ");
+                }
                 iag.pc = buf.ifid.pc;
                 buf.idex.flush();
                 stall = true;
@@ -1005,6 +1017,7 @@ private:
                 appendToConsole("DATA FORWARDING");
                 appendToConsole("From Instruction " + buf.memwb.instr + ": MEMORY Stage");
                 appendToConsole("To Instruction " + buf.idex.instr + ": DECODE Stage");
+                appendToConsole(" ");
                 if (buf.idex.rs1 == buf.memwb.rd)
                 {
                     buf.idex.rs1val = ry;
@@ -1100,41 +1113,47 @@ public:
             buf.idex.pc = buf.ifid.pc;
             buf.idex.next_pc = buf.ifid.next_pc;
 
-            if (buf.idex.opcode=="0100011")
+            if (buf.idex.opcode == "0100011")
             {
-                buf.idex.mem_store_needed=true;
+                buf.idex.mem_store_needed = true;
             }
-            else buf.idex.mem_store_needed=false;
+            else
+                buf.idex.mem_store_needed = false;
 
-            if (buf.idex.opcode=="0000011")
+            if (buf.idex.opcode == "0000011")
             {
-                buf.idex.mem_load_needed=true;
+                buf.idex.mem_load_needed = true;
             }
-            else buf.idex.mem_load_needed=false;
+            else
+                buf.idex.mem_load_needed = false;
 
-            if (buf.idex.opcode!="1100011" && buf.idex.opcode!="0100011") //not branch or store
+            if (buf.idex.opcode != "1100011" && buf.idex.opcode != "0100011") // not branch or store
             {
-                buf.idex.wb_needed=true;
+                buf.idex.wb_needed = true;
             }
-            else buf.idex.wb_needed=false;
+            else
+                buf.idex.wb_needed = false;
 
-            if (buf.idex.opcode=="1100011")
+            if (buf.idex.opcode == "1100011")
             {
-                buf.idex.branch_needed=true;
+                buf.idex.branch_needed = true;
             }
-            else buf.idex.branch_needed=false;
+            else
+                buf.idex.branch_needed = false;
 
-            if (buf.idex.opcode=="1101111")
+            if (buf.idex.opcode == "1101111")
             {
-                buf.idex.jal=true;
+                buf.idex.jal = true;
             }
-            else buf.idex.jal=false;
+            else
+                buf.idex.jal = false;
 
-            if (buf.idex.opcode=="1100111")
+            if (buf.idex.opcode == "1100111")
             {
-                buf.idex.jalr=true;
+                buf.idex.jalr = true;
             }
-            else buf.idex.jalr=false;
+            else
+                buf.idex.jalr = false;
 
             registers.setAddresses(stoi(buf.idex.rs1, nullptr, 2), stoi(buf.idex.rs2, nullptr, 2));
             registers.readRS();
@@ -1181,14 +1200,8 @@ public:
         buf.exmem.mem_load_needed = buf.idex.mem_load_needed;
         buf.exmem.wb_needed = buf.idex.wb_needed;
 
-        if (buf.idex.jal || buf.idex.jalr)
-        {
-            rz = buf.exmem.next_pc;
-            buf.exmem.exe_out = rz;
-        }
-
         string ret_addr;
-        if (buf.idex.branch_needed)  // branch
+        if (buf.idex.branch_needed) // branch
         {
             ControlInstr++;
             if (buf.exmem.exe_out == "00000001")
@@ -1199,9 +1212,11 @@ public:
                     control_stalls += 2;
                     control_hazards++;
                     mispredictions++;
+                    appendToConsole(" ");
                     appendToConsole("!!CONTROL HAZARD DETECTED!!");
                     appendToConsole("FLUSHING THE PIPELINE...");
-                    hazards.push_back({"Control",buf.ifid.pc,ret_addr});
+                    appendToConsole(" ");
+                    hazards.push_back({"Control", buf.ifid.pc, ret_addr});
                     iag.update(ret_addr, true);
                     buf.ifid.flush();
                     buf.idex.flush();
@@ -1217,9 +1232,11 @@ public:
                     control_stalls += 2;
                     control_hazards++;
                     mispredictions++;
+                    appendToConsole(" ");
                     appendToConsole("!!CONTROL HAZARD DETECTED!!");
                     appendToConsole("FLUSHING THE PIPELINE...");
-                    hazards.push_back({"Control",buf.ifid.pc,ret_addr});
+                    appendToConsole(" ");
+                    hazards.push_back({"Control", buf.ifid.pc, ret_addr});
                     iag.update(ret_addr, true);
                     buf.ifid.flush();
                     buf.idex.flush();
@@ -1237,9 +1254,11 @@ public:
                 control_stalls += 2;
                 control_hazards++;
                 mispredictions++;
+                appendToConsole(" ");
                 appendToConsole("!!CONTROL HAZARD DETECTED!!");
                 appendToConsole("FLUSHING THE PIPELINE...");
-                hazards.push_back({"Control",buf.ifid.pc,ret_addr});
+                appendToConsole(" ");
+                hazards.push_back({"Control", buf.ifid.pc, ret_addr});
                 iag.update(ret_addr, true);
                 buf.ifid.flush();
                 buf.idex.flush();
@@ -1256,14 +1275,22 @@ public:
                 control_stalls += 2;
                 control_hazards++;
                 mispredictions++;
+                appendToConsole(" ");
                 appendToConsole("!!CONTROL HAZARD DETECTED!!");
                 appendToConsole("FLUSHING THE PIPELINE...");
-                hazards.push_back({"Control",buf.ifid.pc,ret_addr});
+                appendToConsole(" ");
+                hazards.push_back({"Control", buf.ifid.pc, ret_addr});
                 iag.update(ret_addr, true);
                 buf.ifid.flush();
                 buf.idex.flush();
             }
             brpre.update(buf.exmem.pc, true, ret_addr);
+        }
+
+        if (buf.exmem.opcode == "1101111" || buf.exmem.opcode == "1100111")
+        {
+            rz = buf.exmem.next_pc;
+            buf.exmem.exe_out = rz;
         }
     }
 
@@ -1344,7 +1371,7 @@ public:
             registers.rd = stoi(buf.memwb.rd, nullptr, 2);
             registers.writeRD();
         }
-        if (buf.memwb.instr=="00000073")
+        if (buf.memwb.instr == "00000073")
         {
             flag = false;
         }
@@ -1380,6 +1407,19 @@ public:
             appendToConsole(
                 "  W: rd=x" + to_string(f.registers.rd) +
                 " val=" + ry);
+
+            if (f.buf.memwb.pc == printPipelineForInstruction)
+            {
+                appendToConsole(" ");
+                appendToConsole("Instruction at PC " + printPipelineForInstruction + " completes Writeback.");
+                appendToConsole("Contents of RegisterFile: ");
+                for (int i = 0; i < 32; i++)
+                {
+                    string result = "x" + to_string(i) + ":" + g_registers->regs[i] + ";";
+                    appendToConsole(result);
+                }
+                appendToConsole(" ");
+            }
         }
         else
         {
@@ -1408,10 +1448,29 @@ public:
             appendToConsole("  M: -");
         }
 
+        if (f.buf.exmem.pc == printPipelineForInstruction)
+        {
+            appendToConsole(" ");
+            appendToConsole("Instruction at PC " + printPipelineForInstruction + " completes Memory stage.");
+            appendToConsole("Contents of Exe/Mem buffer: PC=" + f.buf.exmem.pc + ", Instr=" + f.buf.exmem.instr +
+                            ", ALU Result=" + f.buf.exmem.exe_out + ", rs2val=" + f.buf.exmem.rs2val);
+            appendToConsole(" ");
+        }
+
         f.execute();
         appendToConsole(
             "  E: op=" + f.alu.operation +
             " result=" + rz);
+
+        if (f.buf.idex.pc == printPipelineForInstruction)
+        {
+            appendToConsole(" ");
+            appendToConsole("Instruction at PC " + printPipelineForInstruction + " completes Execute stage.");
+            appendToConsole("Contents of Dec/Exe buffer: PC=" + f.buf.idex.pc + ", Instr=" + f.buf.idex.instr +
+                            ", rs1val=" + f.buf.idex.rs1val + ", rs2val=" + f.buf.idex.rs2val +
+                            ", Imm=" + f.buf.idex.imm + ", ALU Operation=" + f.alu.operation);
+            appendToConsole(" ");
+        }
 
         f.decode();
         appendToConsole(
@@ -1421,10 +1480,29 @@ public:
             " rs2=" + f.buf.idex.rs2 +
             " type=" + f.buf.idex.instr_type);
 
+        if (f.buf.ifid.pc == printPipelineForInstruction)
+        {
+            appendToConsole(" ");
+            appendToConsole("Instruction at PC " + printPipelineForInstruction + " completes Decode stage.");
+            appendToConsole("Contents of F/Dec buffer: PC=" + f.buf.ifid.pc + ", Instr=" + f.buf.ifid.instr +
+                            ", Control Instruction=" + (f.buf.idex.branch_needed ? "Yes" : "No") +
+                            ", BTB Hit=" + (g_brpre->BTB.find(f.buf.ifid.pc) != g_brpre->BTB.end() ? "Yes" : "No"));
+            appendToConsole(" ");
+        }
+
         f.fetch();
         appendToConsole(
             "  F: PC=" + f.buf.ifid.pc +
             " Instr=" + f.buf.ifid.instr);
+        appendToConsole(" ");
+
+        if (f.buf.ifid.pc == printPipelineForInstruction)
+        {
+            appendToConsole(" ");
+            appendToConsole("Instruction at PC " + printPipelineForInstruction + " completes Fetch stage.");
+            appendToConsole("Contents of F/Dec buffer: PC=" + f.buf.ifid.pc + ", IR=" + f.buf.ifid.instr);
+            appendToConsole(" ");
+        }
 
         clock_cycle++;
     }
@@ -1487,6 +1565,7 @@ public:
         initialized = true;
         forwardingPaths.clear();
         hazards.clear();
+        printPipelineForInstruction = "";
         appendToConsole("=> Simulator initialized");
     }
 
@@ -1531,6 +1610,7 @@ public:
 
         while (getline(ss, line))
         {
+            cout << line << endl;
             if (line.empty())
             {
                 memory_flag = true;
@@ -1660,14 +1740,25 @@ public:
         }
 
         string result = "";
+        int address = hex_to_dec(g_iag->pc);
+        string ins = "";
+        if (address < 268435456)
+        {
+            ins += (g_text_memory->mem).memory[address];
+            ins += (g_text_memory->mem).memory[address + 1];
+            ins += (g_text_memory->mem).memory[address + 2];
+            ins += (g_text_memory->mem).memory[address + 3];
+        }
 
         // IF stage
         result += "IF:";
+        result += ins + ",";
         result += g_iag->pc + ";";
 
         // ID stage
         result += "ID:";
-        if (g_buffers->ifid.pc=="ffffffff" || g_buffers->ifid.pc=="") result+=";";
+        if (g_buffers->ifid.pc == "ffffffff" || g_buffers->ifid.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->ifid.instr + ",";
@@ -1676,7 +1767,8 @@ public:
 
         // EX stage
         result += "EX:";
-        if (g_buffers->idex.pc=="ffffffff" || g_buffers->idex.pc=="") result+=";";
+        if (g_buffers->idex.pc == "ffffffff" || g_buffers->idex.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->idex.instr + ",";
@@ -1688,7 +1780,8 @@ public:
 
         // MEM stage
         result += "MEM:";
-        if (g_buffers->exmem.pc=="ffffffff" || g_buffers->exmem.pc=="") result+=";";
+        if (g_buffers->exmem.pc == "ffffffff" || g_buffers->exmem.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->exmem.instr + ",";
@@ -1698,7 +1791,8 @@ public:
 
         // WB stage
         result += "WB:";
-        if (g_buffers->memwb.pc=="ffffffff" || g_buffers->memwb.pc=="") result+=";";
+        if (g_buffers->memwb.pc == "ffffffff" || g_buffers->memwb.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->memwb.instr + ",";
@@ -1708,7 +1802,8 @@ public:
 
         // IF/ID buffer
         result += "IF/ID:";
-        if (g_buffers->ifid.pc=="ffffffff" || g_buffers->ifid.pc=="") result+=";";
+        if (g_buffers->ifid.pc == "ffffffff" || g_buffers->ifid.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->ifid.instr + ",";
@@ -1717,7 +1812,8 @@ public:
 
         // ID/EX buffer
         result += "ID/EX:";
-        if (g_buffers->idex.pc=="ffffffff" || g_buffers->idex.pc=="") result+=";";
+        if (g_buffers->idex.pc == "ffffffff" || g_buffers->idex.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->idex.instr + ",";
@@ -1729,7 +1825,8 @@ public:
 
         // EX/MEM buffer
         result += "EX/MEM:";
-        if (g_buffers->exmem.pc=="ffffffff" || g_buffers->exmem.pc=="") result+=";";
+        if (g_buffers->exmem.pc == "ffffffff" || g_buffers->exmem.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->exmem.instr + ",";
@@ -1739,7 +1836,8 @@ public:
 
         // MEM/WB buffer
         result += "MEM/WB:";
-        if (g_buffers->memwb.pc=="ffffffff" || g_buffers->memwb.pc=="") result+=";";
+        if (g_buffers->memwb.pc == "ffffffff" || g_buffers->memwb.pc == "")
+            result += ";";
         else
         {
             result += g_buffers->memwb.instr + ",";
@@ -1754,7 +1852,7 @@ public:
         }
         result += ";";
 
-        //Hazards
+        // Hazards
         result += "HAZ:";
         for (const auto &hazard : hazards)
         {
@@ -1790,7 +1888,7 @@ public:
             throw runtime_error("Simulator not initialized");
         }
 
-        string result="";
+        string result = "";
         result += "IFID: " + g_buffers->ifid.instr + "," + g_buffers->ifid.pc + ";";
         result += "IDEX: " + g_buffers->idex.instr + "," + g_buffers->idex.rs1 + "," + g_buffers->idex.rs2 + "," + g_buffers->idex.rd + "," + g_buffers->idex.imm + ";";
         result += "EXMEM: " + g_buffers->exmem.instr + "," + g_buffers->exmem.exe_out + "," + g_buffers->exmem.rs2val + "," + g_buffers->exmem.rd + ";";
@@ -1800,7 +1898,8 @@ public:
 
     string getStats()
     {
-        if (instructionCt>0)CPI = clock_cycle / instructionCt;
+        if (instructionCt > 0)
+            CPI = clock_cycle / instructionCt;
         string result = "";
         result += "Cycle count:" + to_string(clock_cycle) + ";";
         result += "Instruction count:" + to_string(instructionCt) + ";";
@@ -1815,6 +1914,11 @@ public:
         result += "Data Hazard Stalls:" + to_string(data_stalls) + ";";
         result += "Control Hazard Stalls:" + to_string(control_stalls) + ";";
         return result;
+    }
+
+    void setPrintPipelineForInstruction(const string &pc)
+    {
+        printPipelineForInstruction = pc;
     }
 
 private:
@@ -1845,5 +1949,76 @@ EMSCRIPTEN_BINDINGS(riscv_pipelined_simulator)
         .function("getBP", &RiscVPipelinedSimulator::getBP)
         .function("toggleForwarding", &RiscVPipelinedSimulator::toggleForwarding)
         .function("getPipelineState", &RiscVPipelinedSimulator::getPipelineState)
+        .function("setPrintPipelineForInstruction", &RiscVPipelinedSimulator::setPrintPipelineForInstruction)
         .function("getBuffers", &RiscVPipelinedSimulator::getBuffers);
 };
+
+// int main()
+// {
+//     // Take R'string input
+//     string input = R"ASM(
+//     .data
+//     n: .word 5
+
+//     .text
+//     lui x18, 0x10000
+//     result: addi x10, x0, 0
+//     temp: addi x9, x0, 0
+//     val_n: lw x11, 0(x18)
+//     val_1: addi x19, x0, 1
+//     val_2: addi x20, x0, 2
+//     val_neg1: addi x21, x0, -1
+//     jal x1, fibo
+//     beq x0, x0, final_exit
+
+//     fibo: addi x2, x2, -12
+//         sw x1, 8(x2)
+//         sw x11, 4(x2)
+//         sw x9, 0(x2)
+
+//         case1: bne x11, x19, case2
+//             addi x10, x0, 1
+//             sw x21, 8(x2)
+//             sw x21, 4(x2)
+//             sw x21, 0(x2)
+//             addi x2, x2, 12
+//             jalr x0, x1, 0
+
+//         case2: bne x11, x20, case3
+//             addi x10, x0, 1
+//             sw x21, 8(x2)
+//             sw x21, 4(x2)
+//             sw x21, 0(x2)
+//             addi x2, x2, 12
+//             jalr x0, x1, 0
+
+//         case3: addi x11, x11, -1
+//             jal x1, fibo
+//             addi x9, x10, 0
+//             addi x11, x11, -1
+//             jal x1, fibo
+//             add x10, x10, x9
+//             lw x9, 0(x2)
+//             lw x11, 4(x2)
+//             lw x1, 8(x2)
+//             sw x21, 8(x2)
+//             sw x21, 4(x2)
+//             sw x21, 0(x2)
+//             addi x2, x2, 12
+//             jalr x0, x1, 0
+
+//     final_exit:
+//     )ASM";
+
+//     RiscVPipelinedSimulator simulator;
+//     simulator.init();
+//     cout<<"Simulator initialized\n";
+//     input=simulator.assemble(input);
+//     cout<<"Code assembled successfully\n";
+//     simulator.loadCode(input);
+//     cout<<"Code loaded successfully\n";
+//     simulator.run();
+//     cout<<"Simulation completed\n";
+//     simulator.cleanup();
+//     return 0;
+// }
