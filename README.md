@@ -49,7 +49,7 @@ BlueMoon Simulator is a web-based tool to learn and experiment with RISC‑V pip
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/<your-org>/BlueMoon-Simulator.git
+   git clone https://github.com/ParthKulkarni445/BlueMoon-Simulator.git
    cd BlueMoon-Simulator
    ```
 
