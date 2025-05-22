@@ -108,10 +108,4 @@ For bugs and feature requests, please use GitHub Issues: https://github.com/<you
 
 ---
 
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
 *Happy pipelining!*
