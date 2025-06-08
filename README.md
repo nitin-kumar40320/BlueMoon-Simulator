@@ -104,7 +104,7 @@ Contributions are welcome! Please follow these steps:
 4. Push to your branch: `git push origin feature/YourFeature`  
 5. Open a Pull Request against `main`.  
 
-For bugs and feature requests, please use GitHub Issues: https://github.com/<your-org>/BlueMoon-Simulator/issues
+For bugs and feature requests, please use GitHub Issues: https://github.com/ParthKulkarni445/BlueMoon-Simulator/issues
 
 ---
 
