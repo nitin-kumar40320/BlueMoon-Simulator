@@ -40,7 +40,6 @@ BlueMoon Simulator is a web-based tool to learn and experiment with RISC‑V pip
    - Overall stats: total cycles, instructions executed, CPI  
    - Instruction breakdown (loads/stores, ALU ops, control instructions)  
    - Hazard counts: data hazards, control hazards, stalls, bubbles, mispredictions  
-   - Exportable summary report (CSV or PDF)
 
 ---
 
