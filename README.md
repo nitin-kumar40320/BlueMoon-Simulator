@@ -93,7 +93,7 @@ BlueMoon Simulator is a web-based tool to learn and experiment with RISC‑V pip
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributing 
 
 Contributions are welcome! Please follow these steps:
 
