@@ -2,6 +2,16 @@
 
 An interactive, pipelined RISC‑V simulator built with Flutter Web and WebAssembly. Explore every stage of the classic five‑stage pipeline with live controls, rich visualizations, and detailed metrics.
 
+# Team Members
+
+| Name           | Entry No.   | Github      |
+|----------------|-------------|-------------|
+| Arpit Goel     | 2023CSB1099 | [Arpit01Goel](https://github.com/Arpit01Goel) |
+| Nitin Kumar    | 2023CSB1141 | [2023csb1141](https://github.com/2023csb1141), [nitin-kumar40320](https://github.com/nitin-kumar40320) |
+| Parth Kulkarni | 2023CSB1142 | [ParthKulkarni445](https://github.com/ParthKulkarni445), [Parth445](https://github.com/Parth445) |
+- 
+- 
+- 
 ---
 
 ## 🚀 Overview
