@@ -227,15 +227,57 @@ class _EditorTabState extends State<EditorTab> {
   void _loadExampleCode() {
     // Simple example RISC-V program
     const exampleCode = '''
-# Simple RISC-V program example
-# This program adds two numbers and stores the result
+.data
+.asciiz "abba"
 
-00500113 # addi x2, x0, 5    # Load 5 into x2
-00A00193 # addi x3, x0, 10   # Load 10 into x3
-003100B3 # add x1, x2, x3    # Add x2 and x3, store in x1
-00102223 # sw x1, 4(x0)      # Store x1 at memory address 4
-00002103 # lw x2, 0(x0)      # Load from memory address 0 into x2
-00000073 # ecall             # End program
+.text
+lui x10,0x10000 #Left ptr
+addi x11,x10,0 #Right ptr initialise
+addi x17,x0,0 #Answer bool
+
+loop: #Find right pointer
+    lb x5,0(x11)
+    beq x5,x0,next
+    addi x11,x11,1
+    beq x0,x0,loop
+    
+next:
+addi x11,x11,-1 #Right ptr
+jal x1,is_palindrome
+beq x0,x0,exit
+
+
+is_palindrome:
+        addi sp,sp,-8
+        sw x1,0(sp)
+        
+    base: #If l>=r , return true
+        blt x10,x11,main
+        lw x1,0(sp)
+        addi sp,sp,8
+        addi x17,x0,1
+        jalr x0,x1,0
+    
+    main: #Else, return true if s[l]==s[r]
+        lb x5,0(x10)
+        lb x6,0(x11)
+        bne x5,x6,else 
+        addi x16,x0,1  #Set ans=true
+        sw x16,4(sp)
+        
+        else: #Call is_palindrome(left+1,right-1) 
+        addi x10,x10,1
+        addi x11,x11,-1
+        jal x1,is_palindrome #Return bool ans in x17
+        lw x16,4(sp)
+        bne x16,x0,else2 #If s[l]!=s[r], then ans=false, else ans=ans
+        addi x17,x0,0
+        else2:
+        lw x1,0(sp)
+        addi sp,sp,8
+        jalr x0,x1,0 #Return
+
+exit:
 ''';
 
     setState(() {
