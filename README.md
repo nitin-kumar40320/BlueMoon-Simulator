@@ -16,7 +16,7 @@ An interactive, pipelined RISC‑V simulator built with Flutter Web and WebAssem
 BlueMoon Simulator is a web-based tool to learn and experiment with RISC‑V pipelining. Write or paste assembly code, assemble to machine code, and step through execution cycle‑by‑cycle or run full programs. Toggle pipeline features, inspect hazards, and generate reports—all in your browser.
 
 ## 🔗 Live Demo:
-[https://riscv-simulator-1nzpikb14-parthkulkarni445s-projects.vercel.app](https://riscv-simulator.vercel.app/)
+https://riscv-simulator.vercel.app/
 
 ## 🛠️ Features
 
