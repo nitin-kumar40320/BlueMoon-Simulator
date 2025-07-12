@@ -228,56 +228,62 @@ class _EditorTabState extends State<EditorTab> {
     // Simple example RISC-V program
     const exampleCode = '''
 .data
-.asciiz "abba"
+string: .asciz "racecar"
 
 .text
-lui x10,0x10000 #Left ptr
-addi x11,x10,0 #Right ptr initialise
-addi x17,x0,0 #Answer bool
+front_addr: lui x5, 0x10000
+jal x1, func
+beq x0, x0, code_end
 
-loop: #Find right pointer
-    lb x5,0(x11)
-    beq x5,x0,next
-    addi x11,x11,1
-    beq x0,x0,loop
+func:
+    result_addr: lui x13, 0x10000
+                 ori x13, x13, 0x10
+    result_flag: addi x11, x0, 1
+    back_addr: addi x6, x5, 0
+    curr_char_front: lb x7, 0(x6)
+    loop_start: beq x7, x0, loop_end
+                addi x6, x6, 1
+                lb x7, 0(x6)
+                beq x0, x0, loop_start
+    loop_end: addi x6, x6, -1
     
-next:
-addi x11,x11,-1 #Right ptr
-jal x1,is_palindrome
-beq x0,x0,exit
-
-
-is_palindrome:
-        addi sp,sp,-8
-        sw x1,0(sp)
-        
-    base: #If l>=r , return true
-        blt x10,x11,main
-        lw x1,0(sp)
-        addi sp,sp,8
-        addi x17,x0,1
-        jalr x0,x1,0
+    loop1_start: beq x6, x5, loop2_end
+                lb x7, 0(x5)
+                curr_char_back: lb x8, 0(x6)
+                beq x7, x8, skip
+                    addi x11, x0, 0
+                    beq x0, x0, loop2_end
+                skip:
+                addi x6, x6, -1
+                addi x5, x5, 1
+                beq x0, x0, loop1_start
+                
+    loop2_end:
     
-    main: #Else, return true if s[l]==s[r]
-        lb x5,0(x10)
-        lb x6,0(x11)
-        bne x5,x6,else 
-        addi x16,x0,1  #Set ans=true
-        sw x16,4(sp)
-        
-        else: #Call is_palindrome(left+1,right-1) 
-        addi x10,x10,1
-        addi x11,x11,-1
-        jal x1,is_palindrome #Return bool ans in x17
-        lw x16,4(sp)
-        bne x16,x0,else2 #If s[l]!=s[r], then ans=false, else ans=ans
-        addi x17,x0,0
-        else2:
-        lw x1,0(sp)
-        addi sp,sp,8
-        jalr x0,x1,0 #Return
-
-exit:
+    if_flag_1: beq x11, x0, if_flag_0
+                addi x28, x0, 0x79
+                sb x28, 0(x13)
+                addi x13, x13, 1
+                addi x28, x0, 0x65
+                sb x28, 0(x13)
+                addi x13, x13, 1
+                addi x28, x0, 0x73
+                sb x28, 0(x13)
+                addi x13, x13, 1
+                beq x0, x0, function_end
+                
+    
+    if_flag_0:
+                addi x28, x0, 0x6E
+                sb x28, 0(x13)
+                addi x13, x13, 1
+                addi x28, x0, 0x6F
+                sb x28, 0(x13)
+                addi x13, x13, 1
+                
+    function_end: jalr x31, x1, 0
+    
+code_end:
 ''';
 
     setState(() {
