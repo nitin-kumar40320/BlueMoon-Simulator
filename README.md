@@ -1,6 +1,6 @@
 # BlueMoon Simulator
 
-An interactive, pipelined RISC‑V simulator built with Flutter Web and WebAssembly. Explore every stage of the classic five‑stage pipeline with live controls, rich visualizations, and detailed metrics.
+An interactive, pipelined RISC‑V simulator built with Flutter Web and WebAssembly. Explore every stage of the classic five‑stage pipeline with live controls, rich visualizations, and detailed metrics. 
 
 # Team Members
 
